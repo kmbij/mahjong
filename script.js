@@ -13,7 +13,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 2. 官方固定懲罰庫 (妳自定義的豐富內容)
+// 2. 官方固定懲罰庫
 const officialLibrary = {
   triggers: [
     "自己摸到條子","自己摸到萬字","自己摸到筒子","自己摸到大字", 
@@ -26,7 +26,7 @@ const officialLibrary = {
     "只要有人喊「補花」","只要有人喊「吃」","只要有人喊「碰/對」","只要有人喊「胡/到」","有人講到顏色","有人講到數字","有人講到「東西南北」","有人講到「發財」","有人講到「紅中」","有人講到「東西南北中發白」","有人講到「你我他」","有人摸臉","有人摸頭","別人用「右手」摸牌","別人用「左手」摸牌","有人笑","下家「吃牌」","下家「碰牌」","上家「吃牌」","上家「碰牌」","對家「吃牌」","對家「碰牌」","有人「槓」牌","有人蓋牌（1張2張都算）","有人罵髒話","有人說「等一下」","有人說疑問句","有人說「ㄟ」"
   ],
   actions: [
-    "深蹲 5 下","深蹲 3 下","深蹲 1 下","深蹲 2 下","站起來喊「我是小狗汪汪汪」","跳一段舞","高壓腿", 
+    "深蹲 5 下","深蹲 3 下","深蹲 1 下","深蹲 2 下","站起來喊「我是小狗汪汪汪」","跳一段舞","高壓腿", "站起來轉 1 圈","站起來轉 2 圈","模仿一拳超人",
     "拿牌尺戳上家或下家","大喊「我是豬」","站起來跳 5 下", 
     "喝一口水/飲料","把自己的牌往前推一步","站起來跳 1 下","站起來跳 2 下",
     "站起來跳 3 下","把自己手上的牌洗ㄧ洗","盯著上家 5 秒","盯著下家 5 秒",
@@ -99,7 +99,7 @@ function enterRoom() {
         hasDrawnInThisRound = false;
         lastRoundSeen = status.round;
         display.innerText = "新局開始！請摸牌";
-        document.getElementById('reRollControls').style.display = 'none'; // 新局隱藏重抽
+        document.getElementById('reRollControls').style.display = 'none';
       }
 
       if (status.state === "active" && !hasDrawnInThisRound) {
@@ -112,7 +112,7 @@ function enterRoom() {
 
       if (status.revealed) {
         fetchResults();
-        document.getElementById('reRollControls').style.display = 'none'; // 開牌後不能重抽
+        document.getElementById('reRollControls').style.display = 'none';
       } else {
         document.getElementById('roundResults').innerHTML = "<div style='opacity:0.5; text-align:center;'>等候房主揭曉結果...</div>";
       }
@@ -156,7 +156,6 @@ function revealResults() {
   database.ref(`rooms/${currentRoom}/status`).update({ revealed: true });
 }
 
-// 畫面更新輔助函數
 function updateDisplayContent(t, a) {
   document.getElementById('display').innerHTML = `
     你摸到了：<br>
@@ -166,7 +165,6 @@ function updateDisplayContent(t, a) {
   `;
 }
 
-// 摸牌邏輯
 function draw() {
   if (hasDrawnInThisRound) return;
 
@@ -174,12 +172,14 @@ function draw() {
     const mode = snapshot.val() || "official";
     let tList, aList;
 
+    const regex = /[,，\s]+/; // 支援半形、全形逗號及空格
+
     if (mode === "official") {
       tList = officialLibrary.triggers;
       aList = officialLibrary.actions;
     } else {
-      tList = document.getElementById('triggersInput').value.split(',').map(s => s.trim());
-      aList = document.getElementById('actionsInput').value.split(',').map(s => s.trim());
+      tList = document.getElementById('triggersInput').value.split(regex).map(s => s.trim()).filter(s => s !== "");
+      aList = document.getElementById('actionsInput').value.split(regex).map(s => s.trim()).filter(s => s !== "");
     }
 
     const finalT = tList[Math.floor(Math.random() * tList.length)];
@@ -188,21 +188,22 @@ function draw() {
     hasDrawnInThisRound = true;
     updateDisplayContent(finalT, finalA);
     database.ref(`rooms/${currentRoom}/results/${myName}`).set({ t: finalT, a: finalA });
-    
-    document.getElementById('reRollControls').style.display = 'flex'; // 摸牌後顯示重抽按鈕
+    document.getElementById('reRollControls').style.display = 'flex';
   });
 }
 
-// 重抽功能邏輯
 function reRoll(type) {
   database.ref(`rooms/${currentRoom}/status/mode`).once('value', (snapshot) => {
     const mode = snapshot.val() || "official";
     let list;
+    const regex = /[,，\s]+/;
     
     if (type === 't') {
-      list = (mode === "official") ? officialLibrary.triggers : document.getElementById('triggersInput').value.split(',').map(s => s.trim());
+      list = (mode === "official") ? officialLibrary.triggers : 
+             document.getElementById('triggersInput').value.split(regex).map(s => s.trim()).filter(s => s !== "");
     } else {
-      list = (mode === "official") ? officialLibrary.actions : document.getElementById('actionsInput').value.split(',').map(s => s.trim());
+      list = (mode === "official") ? officialLibrary.actions : 
+             document.getElementById('actionsInput').value.split(regex).map(s => s.trim()).filter(s => s !== "");
     }
 
     const newValue = list[Math.floor(Math.random() * list.length)];
@@ -218,7 +219,6 @@ function reRoll(type) {
   });
 }
 
-// --- 同步與功能函數 ---
 function syncData() {
   const t = document.getElementById('triggersInput').value;
   const a = document.getElementById('actionsInput').value;
