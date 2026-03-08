@@ -1,0 +1,187 @@
+:root {
+  --mj-bg: #1a4314;       /* 經典桌布綠 */
+  --mj-panel: #14330f;    /* 深色飾板 */
+  --mj-card: #fefefe;     /* 骨白牌色 */
+  --mj-gold: #ffd700;     /* 亮金 */
+  --mj-red: #d32f2f;      /* 硃砂紅 */
+}
+
+/* 基礎設定：防止 padding 撐破框框 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px 10px;
+  background-color: var(--mj-bg);
+  background-image: radial-gradient(circle, #235a1b 1px, transparent 1px);
+  background-size: 30px 30px;
+  font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+}
+
+.container { 
+  width: 100%; 
+  max-width: 450px; 
+  text-align: center;
+}
+
+h1 {
+  color: var(--mj-gold);
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  font-size: 1.8rem;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+/* 核心麻將牌卡片 */
+.main-card {
+  background: var(--mj-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: inset 0 -5px 0 #ddd, 0 10px 20px rgba(0,0,0,0.5);
+  color: #333;
+  margin-bottom: 25px;
+  border: 4px solid #fff;
+  width: 100%; /* 確保填滿 container */
+}
+
+.result-box {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 2px inset rgba(0,0,0,0.1);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* 抽籤文字顏色 */
+.trigger-text { color: var(--mj-red); font-size: 1.6rem; font-weight: 900; }
+.action-text { color: var(--mj-bg); font-size: 1.6rem; font-weight: 900; }
+.arrow-text { font-size: 1.1rem; color: #666; margin: 5px 0; }
+
+/* 房主控制面板 */
+.host-panel {
+  background: var(--mj-panel);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--mj-gold);
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column; /* 改為縱向排列以容納模式切換 */
+  gap: 5px;
+}
+
+/* 按鈕設計 */
+button {
+  background: linear-gradient(to bottom, #e53935, #b71c1c);
+  color: white;
+  border: none;
+  padding: 15px;
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #7f1616;
+  transition: 0.1s;
+}
+
+button:active { transform: translateY(2px); box-shadow: 0 2px 0 #7f1616; }
+button:disabled { background: #555; box-shadow: 0 4px 0 #333; color: #888; cursor: not-allowed; }
+
+#revealBtn { background: linear-gradient(to bottom, #1e88e5, #0d47a1); box-shadow: 0 4px 0 #08306b; }
+
+/* 模式選擇選單樣式 */
+#penaltyMode {
+  background: #fff;
+  color: #333;
+  border: 2px solid var(--mj-gold);
+}
+
+/* 設定區與輸入框 */
+.settings {
+  text-align: left;
+  background: rgba(0,0,0,0.3);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  width: 100%;
+}
+
+textarea, input[type="text"] {
+  width: 100%;
+  border-radius: 6px;
+  padding: 12px;
+  border: none;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+/* 玩家標籤 */
+.player-tag {
+  background: var(--mj-gold);
+  color: #1a4314;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin: 4px;
+  display: inline-block;
+  border-bottom: 2px solid #b8860b;
+}
+
+/* 懲罰庫區塊樣式 */
+.library-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.lib-item {
+  display: inline-block;
+  background: #eee;
+  color: #333;
+  padding: 6px 12px;
+  margin: 4px 2px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-bottom: 3px solid #ccc;
+  transition: 0.2s;
+}
+
+.lib-item:hover {
+  background: var(--mj-gold);
+  border-bottom-color: #b8860b;
+  transform: translateY(-2px);
+}
+
+.lib-item:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+
+/* 開獎結果清單 */
+.history-list {
+  background: rgba(255,255,255,0.95);
+  color: #333;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.95rem;
+  min-height: 50px;
+}
+
+.footer { font-size: 0.75rem; margin-top: 20px; opacity: 0.7; }

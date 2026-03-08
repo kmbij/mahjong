@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雀友懲罰房間 - 麻將風格</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>🀄️ 雀友懲罰器</h1>
+
+    <div id="lobby">
+      <div class="settings">
+        <label style="color:var(--mj-gold)">你的暱稱：</label>
+        <input type="text" id="userName" style="width:100%; padding:10px; margin-bottom:15px; border-radius:5px; border:none;">
+        <button onclick="createRoom()" style="background:var(--mj-gold); color:var(--mj-bg); box-shadow: 0 4px 0 #b8860b; margin-bottom:10px;">建立房間 (房主)</button>
+        <div style="margin:10px 0; opacity:0.6; text-align:center;">———— 或 ————</div>
+        <input type="text" id="joinRoomId" placeholder="輸入 4 碼房號" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:none;">
+        <button onclick="joinRoom()" style="background:#555; box-shadow: 0 4px 0 #333;">加入房間</button>
+      </div>
+    </div>
+
+    <div id="roomArea" style="display:none;">
+      <div class="room-header">
+        <h2 style="color:var(--mj-gold)">房間：<span id="currentRoomDisplay">----</span></h2>
+        <div style="font-weight:bold; margin-bottom:10px; text-align:center;">第 <span id="roundNumber">1</span> 局</div>
+        <div id="playerList" class="player-tags"></div>
+      </div>
+
+      <div id="hostControls" style="display:none;">
+        <div class="host-panel">
+          <button onclick="startNextRound()" id="hostBtn">下一局 (重置)</button>
+          <button onclick="revealResults()" id="revealBtn" style="margin-top:10px;">開牌 (公布)</button>
+          
+          <div class="mode-switch" style="margin-top:15px; padding:10px; background:rgba(255,255,255,0.1); border-radius:8px;">
+            <label style="color:var(--mj-gold); font-size:0.9rem; display:block; margin-bottom:5px;">🎲 懲罰模式：</label>
+            <select id="penaltyMode" onchange="syncMode()" style="width:100%; padding:8px; border-radius:5px; border:none; font-weight:bold;">
+              <option value="official">官方固定庫</option>
+              <option value="custom">自訂同步區 (下方輸入框)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="main-card">
+        <div id="display" class="result-box">等候開局...</div>
+        <button id="drawBtn" onclick="draw()" disabled>摸牌 (抽籤)</button>
+        
+        <div id="reRollControls" style="display:none; gap:10px; margin-top:15px;">
+          <button onclick="reRoll('t')" style="background:#8d6e63; font-size:0.85rem; padding:10px; box-shadow:0 4px 0 #5d4037;">重抽觸發條件</button>
+          <button onclick="reRoll('a')" style="background:#546e7a; font-size:0.85rem; padding:10px; box-shadow:0 4px 0 #37474f;">重抽懲罰內容</button>
+        </div>
+      </div>
+
+      <div class="settings" style="margin-top:20px;">
+        <h3>⚙️ 自訂懲罰清單</h3>
+        <textarea id="triggersInput">放槍, 被自摸, 詐胡, 連莊失敗, 相公</textarea>
+        <textarea id="actionsInput">模仿發財姿勢拍照, 大喊我是豬並錄影, 表演無實物吃麻辣燙, 深情對視10秒不准笑, 用屁股寫名字</textarea>
+        <button onclick="syncData()" style="font-size:0.9rem; padding:10px; background:#2196F3; box-shadow: 0 4px 0 #0d47a1;">同步內容至全房間</button>
+      </div>
+
+      <div class="history-section" style="margin-top:20px;">
+        <h3 style="color:var(--mj-gold)">📜 本局結果</h3>
+        <div id="roundResults" class="history-list">
+          <div style="opacity:0.5; text-align:center;">等候房主揭曉...</div>
+        </div>
+      </div>
+      
+      <button onclick="location.reload()" style="background:#444; margin-top:20px; font-size:0.9rem; padding:10px; box-shadow:0 4px 0 #222;">退出房間</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
