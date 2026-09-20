@@ -30,33 +30,47 @@ const officialLibrary = {
     "拿牌尺戳上家或下家","大喊「我是豬」","站起來跳 5 下", 
     "喝一口水/飲料","把自己的牌往前推一步","站起來跳 1 下","站起來跳 2 下",
     "站起來跳 3 下","把自己手上的牌洗ㄧ洗","盯著上家 5 秒","盯著下家 5 秒",
-    "拿麻將打高爾夫球","拿麻將打樂樂棒球","拿麻將打撞球","學雞叫「咕咕咕」","學大猩猩的動作","打自己臉","學青蛙叫「呱呱呱」","站起來「拍手」","說「哇真棒」","拍一張照片發到群組","拿場上已經打出去的牌","跳扭脖子舞（whiplash舞蹈)","說成語"
+    "拿麻將打高爾夫球","拿麻將打樂樂棒球","拿麻將打撞球","學雞叫「咕咕咕」","學大猩猩的動作","打自己臉","學青蛙叫「呱呱呱」","站起來「拍手」","說「哇真棒」","拍一張照片發到群組","拿場上已經打出去的牌","跳扭脖子舞","說成語"
   ]
 };
 
 let currentRoom = "";
 let myName = "";
+let myEmoji = "🀄️";
 let isHost = false; 
 let hasDrawnInThisRound = false;
 let lastRoundSeen = 0;
+let previousScores = null; // 用於計分復原
 
 // --- 房間進入與管理 ---
 function createRoom() {
   myName = document.getElementById('userName').value.trim();
+  myEmoji = document.getElementById('userEmoji').value.trim() || "🀄️";
   if (!myName) return alert("請輸入暱稱");
+  
+  const initBase = parseInt(document.getElementById('initBaseInput').value) || 20;
+  const initTai = parseInt(document.getElementById('initTaiInput').value) || 5;
+
   isHost = true;
   currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
+  
   database.ref(`rooms/${currentRoom}/status`).set({ 
     round: 1, 
     state: "active", 
     revealed: false,
-    mode: "official" 
+    mode: "official",
+    baseScore: initBase,
+    taiScore: initTai,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP 
   });
+  
+  cleanupExpiredRoomsIfNeeded();
   enterRoom();
 }
 
 function joinRoom() {
   myName = document.getElementById('userName').value.trim();
+  myEmoji = document.getElementById('userEmoji').value.trim() || "🀄️";
   const inputRoomId = document.getElementById('joinRoomId').value.trim();
   if (!myName || !inputRoomId) return alert("請輸入暱稱與房號");
   currentRoom = inputRoomId;
@@ -70,30 +84,85 @@ function enterRoom() {
   document.getElementById('currentRoomDisplay').innerText = currentRoom;
   if (isHost) document.getElementById('hostControls').style.display = 'block';
 
+  // 儲存包含 Emoji 的玩家物件
   const playerRef = database.ref(`rooms/${currentRoom}/players`).push();
-  playerRef.set(myName);
+  playerRef.set({ name: myName, emoji: myEmoji });
   playerRef.onDisconnect().remove();
 
+  // 監聽玩家清單與更新計分下拉選單
   database.ref(`rooms/${currentRoom}/players`).on('value', (snapshot) => {
     const listDiv = document.getElementById('playerList');
+    const winnerSelect = document.getElementById('winnerSelect');
+    const loserSelect = document.getElementById('loserSelect');
+
     listDiv.innerHTML = "";
+    winnerSelect.innerHTML = '<option value="">選擇胡牌/自摸者</option>';
+    loserSelect.innerHTML = '<option value="">選擇放銃者</option>';
+
     if (snapshot.val()) {
-      Object.values(snapshot.val()).forEach(name => {
-        listDiv.innerHTML += `<span class="player-tag">👤 ${name}</span>`;
+      const playersObj = snapshot.val();
+      Object.values(playersObj).forEach(player => {
+        const pName = player.name;
+        const pEmoji = player.emoji || "👤";
+        listDiv.innerHTML += `<span class="player-tag">${pEmoji} ${pName}</span>`;
+        winnerSelect.innerHTML += `<option value="${pName}">${pEmoji} ${pName}</option>`;
+        loserSelect.innerHTML += `<option value="${pName}">${pEmoji} ${pName}</option>`;
       });
     }
   });
 
+  // 監聽積分榜分數（結合 Emoji 顯示）
+  database.ref(`rooms/${currentRoom}/scores`).on('value', (scoreSnap) => {
+    const scores = scoreSnap.val() || {};
+    
+    database.ref(`rooms/${currentRoom}/players`).once('value', (playerSnap) => {
+      const playersObj = playerSnap.val() || {};
+      const emojiMap = {};
+      Object.values(playersObj).forEach(p => {
+        emojiMap[p.name] = p.emoji || "👤";
+      });
+
+      const scoreboardDiv = document.getElementById('scoreboardList');
+      scoreboardDiv.innerHTML = "";
+      
+      if (Object.keys(scores).length === 0) {
+        scoreboardDiv.innerHTML = "<div style='opacity:0.6; text-align:center;'>尚無戰績，大家目前皆為 0 分</div>";
+      } else {
+        Object.entries(scores).forEach(([name, score]) => {
+          const emoji = emojiMap[name] || "👤";
+          const colorStyle = score > 0 ? 'color: #81c784;' : (score < 0 ? 'color: #e57373;' : 'color: #ffd700;');
+          scoreboardDiv.innerHTML += `
+            <div class="score-row">
+              <span>${emoji} ${name}</span>
+              <span class="score-num" style="${colorStyle}">${score > 0 ? '+' + score : score} 分</span>
+            </div>
+          `;
+        });
+      }
+    });
+  });
+
+  // 監聽房間狀態與規則
   database.ref(`rooms/${currentRoom}/status`).on('value', (snapshot) => {
     const status = snapshot.val();
     if (status) {
       document.getElementById('roundNumber').innerText = status.round;
-      const drawBtn = document.getElementById('drawBtn');
-      const display = document.getElementById('display');
       
+      const base = status.baseScore || 20;
+      const tai = status.taiScore || 5;
+      document.getElementById('ruleDisplay').innerText = `底 ${base} / 台 ${tai}`;
+      
+      if (isHost) {
+        if (document.getElementById('ruleBase')) document.getElementById('ruleBase').value = base;
+        if (document.getElementById('ruleTai')) document.getElementById('ruleTai').value = tai;
+      }
+
       if (document.getElementById('penaltyMode')) {
         document.getElementById('penaltyMode').value = status.mode || "official";
       }
+
+      const drawBtn = document.getElementById('drawBtn');
+      const display = document.getElementById('display');
 
       if (status.round > lastRoundSeen) {
         hasDrawnInThisRound = false;
@@ -128,14 +197,122 @@ function enterRoom() {
   });
 }
 
-// --- 遊戲邏輯 ---
+// --- 計分相關函數 ---
+function toggleWinType() {
+  const winType = document.getElementById('winType').value;
+  const loserSelect = document.getElementById('loserSelect');
+  if (winType === 'zimo') {
+    loserSelect.style.display = 'none';
+  } else {
+    loserSelect.style.display = 'block';
+  }
+}
+
+function submitScore() {
+  const winType = document.getElementById('winType').value;
+  const winner = document.getElementById('winnerSelect').value;
+  const loser = document.getElementById('loserSelect').value;
+  
+  if (!winner) return alert("請選擇胡牌/自摸者！");
+  if (winType === 'fangchong' && !loser) return alert("請選擇放銃者！");
+  if (winType === 'fangchong' && winner === loser) return alert("胡牌者與放銃者不能是同一人！");
+
+  const tai = parseInt(document.getElementById('taishuInput').value) || 1;
+
+  database.ref(`rooms/${currentRoom}/status`).once('value', (statusSnap) => {
+    const status = statusSnap.val() || {};
+    const base = status.baseScore || 20;
+    const perTai = status.taiScore || 5;
+    
+    const totalWinScore = base + (tai * perTai);
+
+    database.ref(`rooms/${currentRoom}/scores`).once('value', (snapshot) => {
+      let currentScores = snapshot.val() || {};
+
+      // 備份當前分數供「復原上一局」使用
+      previousScores = JSON.parse(JSON.stringify(currentScores));
+
+      database.ref(`rooms/${currentRoom}/players`).once('value', (playerSnap) => {
+        if (playerSnap.val()) {
+          // players 裡面存的是物件 { -Id: {name, emoji}, ... }
+          const playersObj = playerSnap.val();
+          Object.values(playersObj).forEach(p => {
+            if (currentScores[p.name] === undefined) currentScores[p.name] = 0;
+            if (previousScores[p.name] === undefined) previousScores[p.name] = 0;
+          });
+
+          if (winType === 'zimo') {
+            let totalGained = 0;
+            Object.keys(currentScores).forEach(pName => {
+              if (pName !== winner) {
+                currentScores[pName] -= totalWinScore;
+                totalGained += totalWinScore;
+              }
+            });
+            currentScores[winner] += totalGained;
+          } else {
+            currentScores[winner] += totalWinScore;
+            currentScores[loser] -= totalWinScore;
+          }
+
+          database.ref(`rooms/${currentRoom}/scores`).set(currentScores).then(() => {
+            database.ref(`rooms/${currentRoom}/status`).update({
+              lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            });
+            alert(`結算完成！贏家獲得 ${totalWinScore} 分`);
+            document.getElementById('winnerSelect').value = "";
+            document.getElementById('loserSelect').value = "";
+            document.getElementById('taishuInput').value = "1";
+          });
+        }
+      });
+    });
+  });
+}
+
+// 🔄 復原上一局結算
+function undoLastScore() {
+  if (!previousScores) {
+    return alert("目前沒有可復原的記錄（或已經復原過了）！");
+  }
+
+  if (confirm("確定要將積分復原回上一局結算前的狀態嗎？")) {
+    database.ref(`rooms/${currentRoom}/scores`).set(previousScores).then(() => {
+      alert("已成功復原上一局分數！");
+      previousScores = null; 
+    });
+  }
+}
+
+function updateRules() {
+  if (!isHost) return;
+  const newBase = parseInt(document.getElementById('ruleBase').value) || 20;
+  const newTai = parseInt(document.getElementById('ruleTai').value) || 5;
+  
+  database.ref(`rooms/${currentRoom}/status`).update({
+    baseScore: newBase,
+    taiScore: newTai,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP
+  });
+}
+
+// --- 遊戲懲罰抽籤邏輯 ---
 function fetchResults() {
   database.ref(`rooms/${currentRoom}/results`).once('value', (snapshot) => {
     const listDiv = document.getElementById('roundResults');
     listDiv.innerHTML = "";
     if (snapshot.val()) {
-      Object.entries(snapshot.val()).forEach(([name, data]) => {
-        listDiv.innerHTML += `<div style="padding:5px 0; border-bottom:1px solid #eee;"><b>${name}</b>：<span class="trigger-text" style="font-size:1rem">${data.t}</span> → <span class="action-text" style="font-size:1rem">${data.a}</span></div>`;
+      database.ref(`rooms/${currentRoom}/players`).once('value', (playerSnap) => {
+        const playersObj = playerSnap.val() || {};
+        const emojiMap = {};
+        Object.values(playersObj).forEach(p => {
+          emojiMap[p.name] = p.emoji || "👤";
+        });
+
+        Object.entries(snapshot.val()).forEach(([name, data]) => {
+          const emoji = emojiMap[name] || "👤";
+          listDiv.innerHTML += `<div style="padding:5px 0; border-bottom:1px solid #eee;"><b>${emoji} ${name}</b>：<span class="trigger-text" style="font-size:1rem">${data.t}</span> → <span class="action-text" style="font-size:1rem">${data.a}</span></div>`;
+        });
       });
     }
   });
@@ -148,12 +325,16 @@ function startNextRound() {
     round: (lastRoundSeen || 1) + 1,
     state: "active",
     revealed: false,
-    mode: currentMode
+    mode: currentMode,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP
   });
 }
 
 function revealResults() {
-  database.ref(`rooms/${currentRoom}/status`).update({ revealed: true });
+  database.ref(`rooms/${currentRoom}/status`).update({ 
+    revealed: true,
+    lastUpdated: firebase.database.ServerValue.TIMESTAMP 
+  });
 }
 
 function updateDisplayContent(t, a) {
@@ -171,8 +352,7 @@ function draw() {
   database.ref(`rooms/${currentRoom}/status/mode`).once('value', (snapshot) => {
     const mode = snapshot.val() || "official";
     let tList, aList;
-
-    const regex = /[,，\s]+/; // 支援半形、全形逗號及空格
+    const regex = /[,，\s]+/;
 
     if (mode === "official") {
       tList = officialLibrary.triggers;
@@ -230,4 +410,25 @@ function syncMode() {
   if (!isHost) return;
   const mode = document.getElementById('penaltyMode').value;
   database.ref(`rooms/${currentRoom}/status`).update({ mode: mode });
+}
+
+// 🧹 自動清理超過 14 天未使用的房間（包含無時間戳記的舊房）
+function cleanupExpiredRoomsIfNeeded() {
+  const roomsRef = database.ref("rooms");
+  const now = Date.now();
+  const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+
+  roomsRef.once("value", (snapshot) => {
+    const rooms = snapshot.val();
+    if (!rooms) return;
+
+    Object.entries(rooms).forEach(([roomId, roomData]) => {
+      const status = roomData.status || {};
+      const lastUpdated = status.lastUpdated;
+
+      if (!lastUpdated || (now - lastUpdated > fourteenDays)) {
+        roomsRef.child(roomId).remove();
+      }
+    });
+  });
 }

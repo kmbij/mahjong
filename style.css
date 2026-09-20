@@ -46,7 +46,7 @@ h1 {
   color: #333;
   margin-bottom: 25px;
   border: 4px solid #fff;
-  width: 100%; /* 確保填滿 container */
+  width: 100%;
 }
 
 .result-box {
@@ -76,7 +76,7 @@ h1 {
   border: 1px solid var(--mj-gold);
   margin-bottom: 20px;
   display: flex;
-  flex-direction: column; /* 改為縱向排列以容納模式切換 */
+  flex-direction: column;
   gap: 5px;
 }
 
@@ -117,7 +117,7 @@ button:disabled { background: #555; box-shadow: 0 4px 0 #333; color: #888; curso
   width: 100%;
 }
 
-textarea, input[type="text"] {
+textarea, input[type="text"], input[type="number"], select {
   width: 100%;
   border-radius: 6px;
   padding: 12px;
@@ -140,37 +140,18 @@ textarea, input[type="text"] {
   border-bottom: 2px solid #b8860b;
 }
 
-/* 懲罰庫區塊樣式 */
-.library-section {
+/* 計分板項目樣式 */
+.score-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-
-.lib-item {
-  display: inline-block;
-  background: #eee;
-  color: #333;
-  padding: 6px 12px;
-  margin: 4px 2px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  margin-bottom: 5px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  border-left: 4px solid var(--mj-gold);
+}
+.score-row span.score-num {
   font-weight: bold;
-  cursor: pointer;
-  border-bottom: 3px solid #ccc;
-  transition: 0.2s;
-}
-
-.lib-item:hover {
-  background: var(--mj-gold);
-  border-bottom-color: #b8860b;
-  transform: translateY(-2px);
-}
-
-.lib-item:active {
-  transform: translateY(1px);
-  border-bottom-width: 1px;
 }
 
 /* 開獎結果清單 */
@@ -183,5 +164,3 @@ textarea, input[type="text"] {
   font-size: 0.95rem;
   min-height: 50px;
 }
-
-.footer { font-size: 0.75rem; margin-top: 20px; opacity: 0.7; }
